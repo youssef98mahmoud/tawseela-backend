@@ -140,3 +140,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Oh snap! 😢 Internal server error."},
     )
+
+
+@app.get("/health", include_in_schema=False)
+async def health():
+    return {"status": "ok"}

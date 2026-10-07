@@ -19,6 +19,8 @@ async def get_current_user(
 ):
     user_email = token["user"]["email"]
     user = await auth_service.get_user_email(user_email, db)
+    if user is None or not user.is_active:
+        raise exceptions.InvalidTokenException()
     return user
 
 

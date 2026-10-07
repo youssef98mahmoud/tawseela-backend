@@ -8,6 +8,8 @@ api_version = 'v1'
 
 class CustomAuthMiddleWare(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        if request.url.path == "/health":
+            return await call_next(request)
         # Allow unauthenticated access to specific routes
         allowed_paths = [
             "/openapi.json",
