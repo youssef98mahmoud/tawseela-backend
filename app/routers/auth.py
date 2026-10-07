@@ -126,7 +126,7 @@ async def create_user(
 
     # email verification
     private_key = create_url_safe_token({"email": new_user.email})
-    email_verification_link = f"{Config.DOMAIN}/api/v1/auth/verify-account/{private_key}"
+    email_verification_link = f"{Config.DOMAIN}/api/v1/auth/verify/{private_key}"
 
     message = create_message(
         recipients=[new_user.email],
@@ -182,7 +182,7 @@ async def request_email_verification_link(
 
     # Create signed token
     token = create_url_safe_token({"email": email})
-    verification_link = f"{Config.DOMAIN}/api/v1/auth/verify-account/{token}"
+    verification_link = f"{Config.DOMAIN}/api/v1/auth/verify/{token}"
 
     # Send email
     message = create_message(
@@ -220,15 +220,15 @@ async def verify_email(user_private_key: str, db: AsyncSession = Depends(get_db)
         UserNotFoundException: If the user with the provided email does not exist.
     """
 
-    user_data = decode_url_safe_token(user_private_key)
+    user_data = decode_url_safe_token(user_private_key) or {}
     user_email = user_data.get('email')
 
     if not user_email:
         return JSONResponse(
             content={
-                "message": "Could not verify your email. An error ocurred!",
+                "message": "Invalid or expired verification link.",
             },
-            status_code=500,
+            status_code=400,
         )
 
     user = await service.get_user_email(user_email, db)
@@ -365,7 +365,7 @@ async def confirm_reset_password(
     if confirm_password != new_password:
         raise exceptions.PasswordsDontMatchException()
 
-    user_data = decode_url_safe_token(user_private_key)
+    user_data = decode_url_safe_token(user_private_key) or {}
     user_email = user_data.get('email')
 
     if not user_email:
@@ -373,7 +373,7 @@ async def confirm_reset_password(
             content={
                 "message": "Could not reset your password. An error ocurred!",
             },
-            status_code=500,
+            status_code=400,
         )
 
     # Check if user exists

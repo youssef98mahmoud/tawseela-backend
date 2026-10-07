@@ -1,0 +1,9 @@
+.git
+.venv
+.env*
+*.sqlite3
+media/dps/*
+!media/dps/default.png
+__pycache__
+.pytest_cache
+pip-*
