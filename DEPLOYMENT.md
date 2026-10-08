@@ -55,9 +55,10 @@ belong in the mobile bundle.
   read receipts. Private/direct messaging is explicitly unsupported by this
   implementation; it rejects receiver_id instead of exposing private messages.
 - Test email/Redis mocks are not production fallbacks.
-- Credit balances, escrow/commission, women-only filtering, and Stripe payment
-  endpoints described or referenced in the customized app require separate
-  implementation and compatibility work; this fork does not supply them.
+- Integer credit balances, booking escrow, driver settlement with 10% commission,
+  and female-driver filtering are integrated; see CREDIT_INTEGRATION.md for
+  schema migration, transaction guarantees, and staging limits. Stripe endpoints
+  are not supplied by this closed-loop credit backend.
 - Existing password-reset UX, token purpose separation, upload validation,
   booking concurrency, rate limits, dependency security updates, and backup
   recovery need review before public release.

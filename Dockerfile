@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN useradd --create-home appuser
 COPY --chown=appuser:appuser app ./app
 COPY --chown=appuser:appuser templates ./templates
+COPY --chown=appuser:appuser scripts ./scripts
 COPY --chown=appuser:appuser media/dps/default.png ./media/dps/default.png
 RUN mkdir -p /srv/data && chown -R appuser:appuser /srv/data /srv/app/media
 USER appuser

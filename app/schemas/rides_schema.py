@@ -12,7 +12,7 @@ class RideCreate(BaseModel):
     departure_location: str = Field(..., example="Downtown")   # pickup point
     destination: str = Field(..., example="Airport")
     departure_time: datetime = Field(..., example="2025-03-05T15:30:00")
-    price_per_seat: float = Field(..., gt=0, example=15.50)
+    price_per_seat: int = Field(..., strict=True, gt=0, le=1000000, example=15)
 
     class Config:
         from_attributes = True
@@ -34,4 +34,7 @@ class RideResponse(RideCreate):
     driver_id: str  # Driver's user ID
     driver_name: str  # Driver's full name
     driver_profile_image: Optional[str] = None  # Add profile picture field
-    passengers: List[PassengerResponse] = []  # List of passengers
+    price_per_seat: int
+    driver_gender: str = ""
+    status: str = "open"
+    passengers: List[PassengerResponse] = Field(default_factory=list)  # List of passengers
