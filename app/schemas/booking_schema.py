@@ -5,7 +5,7 @@ from pydantic import BaseModel
 class BookingBaseModel(BaseModel):
 
     ride_id: str
-    seats_booked: str
+    seats_booked: int
     total_price: float
 
 

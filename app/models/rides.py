@@ -25,6 +25,8 @@ class Ride(Base, TimeStampMixin):
     role = Column(Enum("passenger", "driver", name="user_role"), default="passenger", nullable=False)
 
 
+    status = Column(String, nullable=False, default="open", server_default="open")
+
     # Relationships
     driver = relationship("User", back_populates="rides")
     bookings = relationship("Booking", back_populates="ride")

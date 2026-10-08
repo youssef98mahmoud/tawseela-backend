@@ -79,6 +79,8 @@ class UserProfile(BaseModel):
     home_address: Optional[str] = None
     profile_image: Optional[str] = None
     date_joined: Optional[datetime] = None
+    credit_balance: int = 0
+    escrow_balance: int = 0
 
     # Convert None to an empty string
     # @field_validator(

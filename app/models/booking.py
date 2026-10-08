@@ -18,6 +18,9 @@ class Booking(Base, TimeStampMixin):
     status = Column(Enum("pending", "confirmed", "canceled", "completed", name="booking_status"), default="pending")
 
 
+    credit_status = Column(String, nullable=False, default="legacy", server_default="legacy")
+    credits_escrowed = Column(Integer, nullable=False, default=0, server_default="0")
+
     # Relationships
     ride = relationship("Ride", back_populates="bookings")
     passenger = relationship("User", back_populates="bookings")

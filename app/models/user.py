@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, Column, DateTime, Enum, String
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, Enum, Integer, String
 from sqlalchemy.orm import relationship
 
 from ..core.database import Base
@@ -37,6 +37,10 @@ class User(Base, TimeStampMixin):
     date_joined = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_verified = Column(Boolean, default=False)
     role = Column(Enum("passenger", "driver", name="user_role"), default="passenger", nullable=False)
+
+    credit_balance = Column(Integer, nullable=False, default=0, server_default="0")
+    escrow_balance = Column(Integer, nullable=False, default=0, server_default="0")
+    __table_args__ = (CheckConstraint("credit_balance >= 0"), CheckConstraint("escrow_balance >= 0"))
 
     # Relationships
     rides = relationship("Ride", back_populates="driver")
