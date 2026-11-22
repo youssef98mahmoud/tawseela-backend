@@ -1,3 +1,4 @@
+from app.utils.uploads import save_profile_image
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
@@ -61,15 +62,7 @@ class AuthService:
         image_path = None
         # Handle optional image upload - check if the user has attached an image file in the frontend
         if profile_image:
-            file_extension = os.path.splitext(profile_image.filename)[1]
-            unique_filename = f"{uuid.uuid4().hex}{file_extension}"
-            image_path = os.path.join(UPLOAD_DIR, unique_filename)
-
-            # Save the uploaded image asynchronously
-            async with aiofiles.open(image_path, "wb") as image_file:
-                while chunk := await profile_image.read(1024):
-                    await image_file.write(chunk)
-
+            image_path = await save_profile_image(profile_image)
 
         hashed_password = hash_password(user.password)
 
@@ -111,3 +104,4 @@ class AuthService:
 
         await session.commit()
         return user
+

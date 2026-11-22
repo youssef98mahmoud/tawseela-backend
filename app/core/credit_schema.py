@@ -28,6 +28,10 @@ def check_original_schema(conn):
 def check_credit_schema(conn):
     check_original_schema(conn)
     inspector = inspect(conn)
+    if 'rides' in inspector.get_table_names():
+        if any(c['column_names'] == ['vehicle_plate']
+               for c in inspector.get_unique_constraints('rides')):
+            raise RuntimeError('Ride schema upgrade required: back up database, stop writes, then run python -m scripts.migrate_ride_lifecycle')
     for table, columns in ADDITIONS.items():
         if table in inspector.get_table_names():
             actual = {c['name'] for c in inspector.get_columns(table)}
@@ -47,3 +51,4 @@ def migrate_credit_schema(conn):
         for name, ddl in columns.items():
             if name not in actual:
                 conn.exec_driver_sql(f'ALTER TABLE {table} ADD COLUMN {name} {ddl}')
+

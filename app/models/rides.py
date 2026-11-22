@@ -15,7 +15,7 @@ class Ride(Base, TimeStampMixin):
     driver_id = Column(String, ForeignKey("users.id"), nullable=False)
     vehicle_type = Column(String, nullable=False)  # e.g., Sedan, SUV, Bike
     vehicle_model = Column(String, nullable=True)
-    vehicle_plate = Column(String, nullable=False, unique=True)
+    vehicle_plate = Column(String, nullable=False)
     available_seats = Column(Integer, nullable=False)
     departure_location = Column(String, nullable=False)     # pickup point
     destination = Column(String, nullable=False)
@@ -50,3 +50,4 @@ class Ride(Base, TimeStampMixin):
 
     def __repr__(self):
         return f"<Ride(id={self.id}, driver_id={self.driver_id}, vehicle_type={self.vehicle_type}, vehicle_plate={self.vehicle_plate})>"
+

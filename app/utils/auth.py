@@ -109,7 +109,7 @@ def verify_access_token(token: str) -> dict:
         return None
 
 
-def create_url_safe_token(data: dict):
+def create_url_safe_token(data: dict, purpose: str = "verify_email"):
     """
     Generates a URL-safe, serialized token from the provided data dictionary.
 
@@ -120,11 +120,11 @@ def create_url_safe_token(data: dict):
         str: A URL-safe, serialized token representing the input data.
     """
 
-    private_key = serializer.dumps(data)
+    private_key = serializer.dumps({**data, "purpose": purpose})
     return private_key
 
 
-def decode_url_safe_token(private_key: str, max_age=1800):
+def decode_url_safe_token(private_key: str, max_age=1800, purpose: str = "verify_email"):
     """
     Decodes a URL-safe token using the provided private key.
 
@@ -141,7 +141,10 @@ def decode_url_safe_token(private_key: str, max_age=1800):
 
     try:
         data = serializer.loads(private_key, max_age=max_age)
+        if not isinstance(data, dict) or data.get("purpose") != purpose:
+            return None
         return data
 
     except Exception as e:
         logging.error(str(e))
+

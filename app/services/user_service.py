@@ -1,3 +1,4 @@
+from app.utils.uploads import save_profile_image
 from fastapi import Form, HTTPException, status, UploadFile
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -45,21 +46,12 @@ class UserService:
             )
         
         user = await db.merge(user)     # Merge the current user with the database session
-        user_data = data.model_dump()
+        user_data = data.model_dump(exclude={"profile_image"})
         user_data["id"] = user_id    # Add user ID in the request data
 
 
         if profile_pic:
-            profile_image_path = os.path.join(UPLOAD_DIR, profile_pic.filename)
-
-            # Save the uploaded image asynchronously
-            async with aiofiles.open(profile_image_path, "wb") as file_object:
-                while chunk := await profile_pic.read(1024):
-                    await file_object.write(chunk)
-
-            # update user profile fields
-            user.profile_image = profile_image_path
-
+            user.profile_image = await save_profile_image(profile_pic)
 
         # Since mobile number is unique, check if mobile number exists before updating
         new_mobile_number = user_data.get("mobile_number")
@@ -95,4 +87,5 @@ class UserService:
             raise   # re-raise the original exception
 
         return user
+
 

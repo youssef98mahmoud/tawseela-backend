@@ -1,5 +1,7 @@
 from datetime import datetime
 from fastapi import Form
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
 from pydantic import BaseModel, EmailStr, Field, field_validator, StringConstraints
 from typing import Annotated, List, Optional
 from uuid import UUID
@@ -17,7 +19,7 @@ class BaseUser(BaseModel):
     username: str
     email: EmailStr
     mobile_number: validated_mobile_num
-    password: str
+    password: str = Field(min_length=8, max_length=72)
 
 
 class CreateUser(BaseUser):
@@ -40,15 +42,12 @@ class CreateUser(BaseUser):
         This method is used with FastAPI's `Depends()` - in edit profile's router to allow
         handling form submissions while maintaining model validation.
         """
-        return cls(
-            first_name=first_name,
-            last_name=last_name,
-            username=username,
-            email=email,
-            mobile_number=mobile_number,
-            gender=gender,
-            password=password
-        )
+        try:
+            return cls(first_name=first_name, last_name=last_name, username=username,
+                       email=email, mobile_number=mobile_number, gender=gender, password=password)
+        except ValidationError as exc:
+            errors = [{**error, "loc": ("body", *error["loc"])} for error in exc.errors()]
+            raise RequestValidationError(errors) from exc
 
 
     class Config:
@@ -70,6 +69,8 @@ class UserProfile(BaseModel):
     last_name: Optional[str] = None
     username: Optional[str] = None
     bio: Optional[str] = None
+    gender: Optional[str] = None
+    role: str = "passenger"
     email: EmailStr
     mobile_number: Optional[str] = None
     facebook_handle: Optional[str] = None
@@ -170,3 +171,4 @@ class UpdateUserProfileResponse(UpdateUserProfile):
 
     class Config:
         from_attributes = True
+

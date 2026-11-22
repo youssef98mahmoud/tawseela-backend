@@ -5,7 +5,7 @@ from ..core.dependencies import get_db, get_current_user, RoleChecker
 from ..models import User
 from ..schemas.rides_schema import RideCreate, RideResponse
 from ..services.rides_service import RideService
-from ..services.credit_service import book_with_credits, complete_with_credits
+from ..services.credit_service import book_with_credits, complete_with_credits, cancel_with_credits
 
 
 router = APIRouter()
@@ -47,7 +47,7 @@ async def book_ride(
     return await book_with_credits(ride_id, current_user.id)
 
 
-@router.post("/rides/new-ride", dependencies=[drivers_only], status_code=status.HTTP_201_CREATED, response_model=RideResponse)
+@router.post("/rides/new-ride", dependencies=[verified_members], status_code=status.HTTP_201_CREATED, response_model=RideResponse)
 async def share_your_ride(
     ride_data: RideCreate,
     db: AsyncSession = Depends(get_db),
@@ -61,3 +61,9 @@ async def share_your_ride(
 @router.post("/rides/{ride_id}/complete")
 async def complete_ride(ride_id: str, current_user: User = Depends(get_current_user)):
     return await complete_with_credits(ride_id, current_user.id)
+
+
+@router.post("/rides/{ride_id}/cancel")
+async def cancel_ride(ride_id: str, current_user: User = Depends(get_current_user)):
+    return await cancel_with_credits(ride_id, current_user.id)
+
