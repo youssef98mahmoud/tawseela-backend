@@ -1,7 +1,7 @@
 # Account and ride-credit integration
 
 This integrates the credit prototype from `tawseela-app` commit `c2d8b1a` into
-this repository's verified account system. It does not modify the Render service
+this repository's verified account system. It does not establish a hosting provider
 or combine existing database files.
 
 ## App API contracts retained
@@ -12,7 +12,7 @@ or combine existing database files.
 - `POST /api/v1/{ride_id}/book` holds one seat's integer price in escrow.
 - `POST /api/v1/rides/{ride_id}/complete` releases all backed bookings, pays the
   driver, and retains `floor(total_credits * 10 / 100)` as platform commission.
-- `POST /api/v1/rides/new-ride` requires a verified driver; prices are positive
+- `POST /api/v1/rides/new-ride` allows verified passenger or driver members to offer rides; prices are positive
   whole credits (at most 1,000,000 per seat).
 
 All these routes require a signed, unexpired access token and an active account.
@@ -46,7 +46,7 @@ For an existing database created by this repo's *account backend*:
 
 1. Stop writes, make a recoverable backup, and test on a copy first.
 2. Configure its DATABASE_URL and other server settings.
-3. Run `python -m scripts.migrate_credits` (also available inside the container).
+3. Run `python -m scripts.migrate_ride_lifecycle` (also available inside the container). See `docs/ride-lifecycle-upgrade.md`; this also removes the old unique vehicle-plate constraint.
 4. Restart the server and verify the accounts and profiles on staging.
 
 The additive migration preserves existing accounts and bookings. Old bookings
@@ -55,21 +55,16 @@ Do not invent credits to complete them. Reconcile them explicitly before release
 Startup refuses a schema that needs this migration instead of failing later
 while handling user requests.
 
-The *currently deployed Render prototype* has a different schema, including
-users without password hashes and bookings without account-backend IDs. This
-migration refuses that schema. A separate export, identity reconciliation, and
-balance migration must be designed after confirming whether it has real data.
-Do not change Render's repository/branch or database in place yet.
+The historical prototype inside the app repository has a different schema. This migration refuses incompatible schemas. If such a database contains data to retain, plan a separate export, identity reconciliation and balance migration. No deployment of that prototype is established by this repository.
 
 ## Product decisions still needed
 
 New accounts get zero credits. There is no public mint/top-up endpoint or
 automatic signup grant. The product owner must decide how the initial supply
 is allocated. Tests seed their own isolated database; those grants do not exist
-in production. Driver onboarding/approval also remains an operator decision;
-signup does not grant driver privileges.
+in production. Verified members can now offer rides without a manual driver-role change. Additional driver vetting is a separate product decision.
 
-Cancellation/refunds and per-user unread receipts are not implemented. Stripe
+Cancellation/refunds are implemented for open rides before departure; see `docs/ride-lifecycle-upgrade.md`. Per-user unread receipts remain unimplemented. Stripe
 payment UI in the mobile project must be reconciled with the closed-loop model;
 this server does not pretend to accept real-money payments.
 
