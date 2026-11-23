@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import HTTPException
 from sqlalchemy import select, or_
 from sqlalchemy.exc import IntegrityError
@@ -23,7 +24,7 @@ class RideService:
 
     async def get_rides(self, destination, db, women_only=False):
         from app.models import User
-        stmt = self.query().where(Ride.status == 'open', Ride.is_available.is_(True), Ride.available_seats > 0)
+        stmt = self.query().where(Ride.status == 'open', Ride.is_available.is_(True), Ride.available_seats > 0, Ride.departure_time > datetime.now(timezone.utc).replace(tzinfo=None))
         if destination:
             stmt = stmt.where(Ride.destination.ilike('%' + destination + '%'))
         if women_only:
@@ -40,7 +41,15 @@ class RideService:
     async def share_current_users_ride(self, ride_data, user, db):
         if ride_data.available_seats < 1:
             raise HTTPException(422, 'A new ride must have at least one seat')
-        new_ride = Ride(**ride_data.model_dump(), driver_id=user.id)
+        departure = ride_data.departure_time
+        if departure.tzinfo is None:
+            raise HTTPException(422, 'Departure time must include a timezone')
+        departure = departure.astimezone(timezone.utc)
+        if departure <= datetime.now(timezone.utc):
+            raise HTTPException(422, 'Departure time must be in the future')
+        data = ride_data.model_dump()
+        data['departure_time'] = departure.replace(tzinfo=None)
+        new_ride = Ride(**data, driver_id=user.id)
         db.add(new_ride)
         try:
             await db.flush()
@@ -51,3 +60,4 @@ class RideService:
             raise HTTPException(409, 'Ride conflicts with an existing vehicle record')
         ride = await db.scalar(self.query().where(Ride.id == ride_id))
         return self.response(ride)
+

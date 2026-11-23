@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 """SQLite credit writes are serialized before reading balances or seat counts.
 
 Uses a separate session from authentication, which may already have a read
@@ -8,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import HTTPException
 from sqlalchemy import select, text
 from app.core.database import AsyncSessionLocal
-from app.models import User, Ride, Booking, PlatformLedger, CreditTransfer
+from app.models import User, Ride, Booking, PlatformLedger, CreditTransfer, CreditRefund
 
 @asynccontextmanager
 async def credit_transaction():
@@ -37,6 +38,8 @@ async def book_with_credits(ride_id, user_id):
         ride = await db.get(Ride, ride_id)
         if not ride:
             raise HTTPException(404, 'Ride not found')
+        if ride.departure_time.replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
+            raise HTTPException(409, 'This ride has already departed')
         if ride.driver_id == user_id:
             raise HTTPException(400, 'Drivers cannot book their own ride')
         if ride.status != 'open' or not ride.is_available or ride.available_seats < 1:
@@ -92,3 +95,42 @@ async def complete_with_credits(ride_id, user_id):
         ride.is_available = False
         return {'message':'Ride completed and escrow released', 'gross_credits':gross,
                 'driver_credits':gross - commission, 'platform_commission':commission}
+
+
+async def cancel_with_credits(ride_id, user_id):
+    """The driver cancels the ride; a passenger cancels only their own booking."""
+    async with credit_transaction() as db:
+        await verified_user(db, user_id)
+        ride = await db.get(Ride, ride_id)
+        if not ride:
+            raise HTTPException(404, 'Ride not found')
+        if ride.status != 'open':
+            raise HTTPException(409, 'This ride is no longer open')
+        if ride.departure_time.replace(tzinfo=timezone.utc) <= datetime.now(timezone.utc):
+            raise HTTPException(409, 'Cancellation is only available before departure')
+        stmt = select(Booking).where(Booking.ride_id == ride_id, Booking.status != 'canceled')
+        if ride.driver_id != user_id:
+            stmt = stmt.where(Booking.passenger_id == user_id)
+        bookings = (await db.scalars(stmt)).all()
+        if ride.driver_id != user_id and not bookings:
+            raise HTTPException(409, 'No active booking to cancel')
+        refunded = 0
+        for booking in bookings:
+            amount = booking.credits_escrowed
+            passenger = await db.get(User, booking.passenger_id)
+            if booking.credit_status != 'escrowed' or amount <= 0:
+                raise HTTPException(409, 'Legacy or settled booking requires review')
+            if passenger is None or passenger.escrow_balance < amount:
+                raise HTTPException(409, 'Escrow ledger is inconsistent')
+            passenger.escrow_balance -= amount
+            passenger.credit_balance += amount
+            booking.status = 'canceled'
+            booking.credit_status = 'refunded'
+            ride.available_seats += booking.seats_booked
+            db.add(CreditRefund(booking_id=booking.id, amount=amount))
+            refunded += amount
+        if ride.driver_id == user_id:
+            ride.status = 'canceled'
+            ride.is_available = False
+        return {'message': 'Cancellation complete', 'credits_refunded': refunded}
+

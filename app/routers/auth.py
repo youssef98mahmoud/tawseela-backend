@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 from datetime import datetime, timedelta
 from fastapi import APIRouter, BackgroundTasks, Depends, File, status, UploadFile
 from fastapi.responses import JSONResponse
@@ -296,41 +298,22 @@ async def get_user_details(user = Depends(get_current_user)):
 
 
 @router.post('/reset-password')
-async def reset_password(user_email: ResetPasswordSchema, bg_task: BackgroundTasks, user: User = Depends(get_current_user)):
-    """
-    Handles password reset requests by generating a secure reset link and sending it to the user's email address.
-    Args:
-        user_email (ResetPasswordSchema): The schema containing the user's email address for password reset.
-        bg_task (BackgroundTasks): FastAPI background task manager for sending the email asynchronously.
-        user (User, optional): The currently authenticated user, injected via dependency.
-    Returns:
-        JSONResponse: A response indicating that the password reset instructions have been sent to the user's email.
-    Raises:
-        HTTPException: If the user is not authenticated or the email is invalid.
-    Side Effects:
-        Sends an email with a password reset link to the specified user.
-    """
-
-    email = user_email.email
-
-    private_key = create_url_safe_token({"email": email})
-    reset_password_link = f"{Config.DOMAIN}/api/v1/auth/confirm-reset-password/{private_key}"
-
-    message = create_message(
-        recipients=[email],
-        subject="Reset your password",
-        template_body={
-            "user_name": user.username,
-            "reset_password_link": reset_password_link
-        }
-    )
-    bg_task.add_task(mail.send_message, message, template_name="reset_password.html")
-    return JSONResponse(
-        content={
-            "message": "Please check your email for instructions to reset your password.",
-        },
-        status_code=200
-    )
+async def reset_password(user_email: ResetPasswordSchema, bg_task: BackgroundTasks,
+                         db: AsyncSession = Depends(get_db)):
+    # Account recovery must work without a current access token. Do not reveal
+    # whether an address exists in the response.
+    user = await service.get_user_email(user_email.email, db)
+    if user and user.is_active and user.password:
+        token = create_url_safe_token({
+            "email": user.email,
+            "password_version": hashlib.sha256(user.password.encode()).hexdigest(),
+        }, purpose="reset_password")
+        message = create_message(
+            recipients=[user.email], subject="Reset your password",
+            template_body={"user_name": user.username,
+                "reset_password_link": f"{Config.DOMAIN}/api/v1/auth/confirm-reset-password/{token}"})
+        bg_task.add_task(mail.send_message, message, template_name="reset_password.html")
+    return {"message": "If the account exists, password reset instructions have been sent."}
 
 
 @router.post('/confirm-reset-password/{user_private_key}')
@@ -365,7 +348,7 @@ async def confirm_reset_password(
     if confirm_password != new_password:
         raise exceptions.PasswordsDontMatchException()
 
-    user_data = decode_url_safe_token(user_private_key) or {}
+    user_data = decode_url_safe_token(user_private_key, purpose="reset_password") or {}
     user_email = user_data.get('email')
 
     if not user_email:
@@ -381,6 +364,10 @@ async def confirm_reset_password(
 
     if not user:
         raise exceptions.UserNotFoundException()
+
+    expected_version = hashlib.sha256((user.password or "").encode()).hexdigest()
+    if not hmac.compare_digest(str(user_data.get("password_version", "")), expected_version):
+        return JSONResponse(status_code=400, content={"message": "Invalid or already used reset link."})
 
     user_hashed_password = hash_password(new_password)
     await service.update_user_profile(user, {'password': user_hashed_password}, session)
@@ -417,3 +404,4 @@ async def logout(token_details: dict = Depends(AccessTokenBearer())):
             "message": "User logged out successfully!",
         }
     )
+

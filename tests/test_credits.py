@@ -127,7 +127,7 @@ def test_legacy_booking_cannot_create_credits(client):
 
 def test_fractional_ride_price_rejected(funded):
     data={'vehicle_type':'car','vehicle_model':'test','vehicle_plate':'TEST2','available_seats':2,
-          'departure_location':'Cairo','destination':'Giza','departure_time':'2030-01-01T12:00:00','price_per_seat':1.5}
+          'departure_location':'Cairo','destination':'Giza','departure_time':'2030-01-01T12:00:00Z','price_per_seat':1.5}
     assert funded.post('/api/v1/rides/new-ride',headers=headers('driver'),json=data).status_code==422
     data['price_per_seat']=20
     r=funded.post('/api/v1/rides/new-ride',headers=headers('driver'),json=data)
@@ -171,3 +171,4 @@ def test_signed_login_to_booking_and_completion(client):
     profile=client.get('/api/v1/users/profile',headers=passenger)
     assert profile.json()['credit_balance']==30
     assert profile.json()['escrow_balance']==0
+

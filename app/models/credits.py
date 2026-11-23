@@ -19,3 +19,12 @@ class CreditTransfer(Base, TimeStampMixin):
     amount = Column(Integer, nullable=False)
     __table_args__ = (UniqueConstraint('ride_id', 'passenger_id', 'kind'),
                      CheckConstraint('amount > 0'), CheckConstraint("kind IN ('escrow', 'release')"))
+
+class CreditRefund(Base, TimeStampMixin):
+    """One refund per booking; additive table preserves old audit constraints."""
+    __tablename__ = 'credit_refunds'
+    id = Column(String, primary_key=True, default=lambda: uuid.uuid4().hex)
+    booking_id = Column(String, ForeignKey('bookings.id'), nullable=False, unique=True)
+    amount = Column(Integer, nullable=False)
+    __table_args__ = (CheckConstraint('amount > 0'),)
+
