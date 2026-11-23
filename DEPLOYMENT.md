@@ -1,6 +1,6 @@
 # Tawseela server preparation
 
-This branch repairs startup and adds isolated tests. It is not a live deployment
+This repository is the account and ride backend for `youssef98mahmoud/tawseela-app`. No hosting provider is established by its configuration. It is not a live deployment
 or a complete production-readiness assessment.
 
 ## What is verified
@@ -41,9 +41,7 @@ API documentation is at `/api/v1/docs`.
 
 Exercise real signup, email delivery, verification, login, rides, logout, and
 restart persistence on a staging server. Automated tests do not verify external
-services or full mobile integration. The mobile messaging service must send the
-stored Bearer token with its requests; the inspected Flutter service currently
-omits it. Do not weaken server authentication to accommodate that omission.
+services or full mobile integration. Mobile requests must send a valid stored Bearer token. Verify the deployed app's requests rather than weakening server authentication.
 
 After staging works, the mobile APP_ENV needs only client-safe values, starting
 with `API_URL=https://YOUR-SERVER-ORIGIN` (no trailing slash). Server secrets never
@@ -59,9 +57,9 @@ belong in the mobile bundle.
   and female-driver filtering are integrated; see CREDIT_INTEGRATION.md for
   schema migration, transaction guarantees, and staging limits. Stripe endpoints
   are not supplied by this closed-loop credit backend.
-- Existing password-reset UX, token purpose separation, upload validation,
-  booking concurrency, rate limits, dependency security updates, and backup
-  recovery need review before public release.
+- Token purpose separation, bounded image uploads and transactional booking/refunds have regression coverage. Password-reset browser UX/session revocation, rate limits, dependency security updates and backup recovery still need review before public release.
+- For existing SQLite databases, follow `docs/ride-lifecycle-upgrade.md` before starting the merged version. Back up and stop writes before migration.
+- Subscription billing is absent from this account backend. The Flutter checkout endpoint must be implemented here with verified payment events and subscription access control; the historical app-local prototype is not a deployment substitute.
 - The upstream repository has an empty License section and no LICENSE file in
   the inspected tree. Confirm reuse/distribution terms with its author before
   publishing a commercial service.
