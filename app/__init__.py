@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.database import init_db
+from app.routers.payments import router as payments_router
 from app.exceptions import (
     create_exception_handler,
     AccessTokenRequiredException,
@@ -81,6 +82,7 @@ app.add_middleware(CustomAuthMiddleWare)
 
 
 # register endpoints
+app.include_router(payments_router, prefix="/api/v1/payments", tags=["Subscriptions"])
 app.include_router(auth_router, prefix=f'/api/{api_version}/auth', tags=["Authentication"])
 app.include_router(users_router, prefix=f'/api/{api_version}/users', tags=["Users"])
 app.include_router(rides_router, prefix=f'/api/{api_version}', tags=["Rides"])
@@ -145,3 +147,4 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.get("/health", include_in_schema=False)
 async def health():
     return {"status": "ok"}
+

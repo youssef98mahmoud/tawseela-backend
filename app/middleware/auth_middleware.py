@@ -8,7 +8,7 @@ api_version = 'v1'
 
 class CustomAuthMiddleWare(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        if request.url.path == "/health":
+        if request.url.path == "/health" or (request.method == "POST" and request.url.path == "/api/v1/payments/webhook") :
             return await call_next(request)
         # Allow unauthenticated access to specific routes
         allowed_paths = [
@@ -37,3 +37,4 @@ class CustomAuthMiddleWare(BaseHTTPMiddleware):
 
         response = await call_next(request)
         return response
+

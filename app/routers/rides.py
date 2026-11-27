@@ -1,3 +1,4 @@
+from .payments import require_subscription
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,7 +37,7 @@ async def get_user_booked_rides(
     return await service.get_rides_booked_by_current_user(current_user, db)
 
 
-@router.post("/{ride_id}/book", status_code=status.HTTP_201_CREATED)
+@router.post("/{ride_id}/book", dependencies=[Depends(require_subscription)], status_code=status.HTTP_201_CREATED)
 async def book_ride(
     ride_id: str,
     current_user: User = Depends(get_current_user),
@@ -47,7 +48,7 @@ async def book_ride(
     return await book_with_credits(ride_id, current_user.id)
 
 
-@router.post("/rides/new-ride", dependencies=[verified_members], status_code=status.HTTP_201_CREATED, response_model=RideResponse)
+@router.post("/rides/new-ride", dependencies=[verified_members, Depends(require_subscription)], status_code=status.HTTP_201_CREATED, response_model=RideResponse)
 async def share_your_ride(
     ride_data: RideCreate,
     db: AsyncSession = Depends(get_db),

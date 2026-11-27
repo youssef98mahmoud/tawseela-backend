@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     USE_CREDENTIALS: bool
     VALIDATE_CERTS: bool
 
+    BILLING_ENABLED: bool = False
+    BILLING_ALLOW_LIVE: bool = False
+    REQUIRE_SUBSCRIPTION: bool = False
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_MONTHLY_PRICE_ID: str = ""
+
     model_config = SettingsConfigDict(
         env_file='.env',
         extra='ignore',
@@ -42,3 +49,4 @@ class Settings(BaseSettings):
 
 
 Config = Settings()
+
